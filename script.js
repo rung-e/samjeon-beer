@@ -83,13 +83,22 @@ const fileGroups = {
     ],
     "덱 티어표": [
         {
-            id: 25,
+            id: 21,
             title: "최신 중국섭 티어표 (S25 가이드)",
             description: "S25 가이드에 포함된 최신 중국섭 티어표",
             fileType: "PDF",
             path: "files/시즌25_티어덱.pdf",
         },
-    ]
+    ],
+    "종합 가이드": [
+        {
+            id: 31,
+            title: "건전지의 삼국지 전략판",
+            description: "건전지님의 삼전판 종합 가이드",
+            fileType: "HTML",
+            path: "https://www.notion.so/2098ce4dac7b80e8aaeec4993170ddc3",
+        }
+    ],
 };
 
 class FileViewer {
