@@ -6,7 +6,7 @@ const fileGroups = {
             title: "최신 개척덱",
             description: "시즌25 기준 개척덱 가이드",
             fileType: "PDF",
-            path: "files/시즌25_개척덱.pdf",
+            path: "files/시즌25_개척덱.pdf",
         },
         {
             id: 2,
