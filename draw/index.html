@@ -1,0 +1,738 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>삼국지전략판 뽑기 시뮬레이터</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .header {
+    text-align: center;
+    padding: 16px 12px 8px;
+    background: linear-gradient(135deg, #16213e, #0f3460);
+    width: 100%;
+  }
+  .header h1 {
+    font-size: 1.3rem;
+    color: #f0c040;
+    text-shadow: 0 2px 8px rgba(240,192,64,0.3);
+    letter-spacing: 2px;
+  }
+  .header .subtitle {
+    font-size: 0.75rem;
+    color: #8899aa;
+    margin-top: 4px;
+  }
+  .container {
+    width: 100%;
+    max-width: 480px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .hidden { display: none !important; }
+
+  /* Package selection screen */
+  .pkg-screen { padding-top: 8px; }
+  .pkg-breadcrumb {
+    font-size: 0.8rem;
+    color: #8899aa;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 24px;
+  }
+  .pkg-breadcrumb .crumb {
+    cursor: pointer;
+    color: #5588bb;
+    text-decoration: underline;
+  }
+  .pkg-breadcrumb .sep { color: #556677; }
+  .pkg-breadcrumb .current { color: #e0e0e0; }
+  .pkg-title { font-size: 1rem; font-weight: bold; color: #f0c040; margin-bottom: 12px; }
+  .pkg-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pkg-btn {
+    padding: 14px 16px;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 10px;
+    color: #e0e0e0;
+    font-size: 0.95rem;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .pkg-btn:hover { background: #1a2a4e; border-color: #f0c040; }
+  .pkg-btn:active { transform: scale(0.98); }
+  .pkg-btn .pkg-count {
+    font-size: 0.7rem;
+    font-weight: normal;
+    color: #667788;
+    margin-left: 6px;
+  }
+
+  /* Sim screen top bar */
+  .sim-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .sim-pkg-name {
+    font-size: 0.8rem;
+    color: #8899aa;
+    flex: 1;
+    line-height: 1.3;
+  }
+  .sim-pkg-name span { color: #f0c040; font-weight: bold; }
+  .btn-change {
+    padding: 6px 12px;
+    background: #0f3460;
+    border: 1px solid #1a4a7a;
+    border-radius: 6px;
+    color: #8899aa;
+    font-size: 0.7rem;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .btn-change:hover { background: #1a4a7a; color: #e0e0e0; }
+
+  /* Pity counters */
+  .pity-bar { display: flex; gap: 8px; font-size: 0.8rem; }
+  .pity-item {
+    flex: 1;
+    background: #16213e;
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+    border: 1px solid #0f3460;
+  }
+  .pity-item .label { color: #8899aa; font-size: 0.7rem; }
+  .pity-item .value { font-size: 1.1rem; font-weight: bold; margin-top: 2px; }
+  .pity-item .value.warn { color: #ff6b6b; }
+
+  /* Draw area: 3 top + 2 bottom centered */
+  .draw-area {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+  }
+  .draw-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+  }
+  .card {
+    width: 80px; height: 110px;
+    border-radius: 8px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: bold;
+    opacity: 0;
+    transform: scale(0.3) rotateY(180deg);
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative; text-align: center;
+    padding: 6px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  }
+  .card.revealed { opacity: 1; transform: scale(1) rotateY(0deg); }
+  .card .star { font-size: 0.65rem; margin-bottom: 4px; }
+  .card .name { font-size: 0.85rem; line-height: 1.2; }
+  .card .pity-tag {
+    position: absolute; bottom: 4px;
+    font-size: 0.55rem;
+    background: rgba(0,0,0,0.5);
+    padding: 1px 5px; border-radius: 4px;
+    color: #ff6b6b;
+  }
+  .card.star3 {
+    background: linear-gradient(145deg, #1a3a5c, #0d253f);
+    border: 2px solid #2980b9; color: #7ec8e3;
+  }
+  .card.star4 {
+    background: linear-gradient(145deg, #3a1a5c, #250d3f);
+    border: 2px solid #8e44ad; color: #c39bd3;
+  }
+  .card.star5 {
+    background: linear-gradient(145deg, #5c4a1a, #3f350d);
+    border: 2px solid #d4a843; color: #f5deb3;
+    box-shadow: 0 0 12px rgba(212,168,67,0.3);
+  }
+  .card.star5rare {
+    background: linear-gradient(145deg, #7a5a00, #5c3d00);
+    border: 2px solid #ffd700; color: #fff8dc;
+    box-shadow: 0 0 20px rgba(255,215,0,0.5);
+  }
+  .card.star5rare .name { color: #ffd700; }
+  .card.collection {
+    background: linear-gradient(145deg, #1a4a3a, #0d3f2a);
+    border: 2px solid #2ecc71; color: #a9dfbf;
+    box-shadow: 0 0 12px rgba(46,204,113,0.3);
+  }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 8px; }
+  .btn {
+    flex: 1; padding: 14px; border: none; border-radius: 10px;
+    font-size: 1rem; font-weight: bold; cursor: pointer;
+    transition: transform 0.1s, filter 0.1s; font-family: inherit;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-draw {
+    background: linear-gradient(135deg, #f0c040, #d4a020);
+    color: #1a1a2e;
+  }
+  .btn-draw:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-reset { background: #333; color: #aaa; flex: 0.4; font-size: 0.85rem; }
+  .btn-prob {
+    background: #0f3460; color: #8899aa; flex: 0.4; font-size: 0.85rem;
+    border: 1px solid #1a4a7a;
+  }
+  .btn-prob:hover { background: #1a4a7a; color: #e0e0e0; }
+
+  /* Stats panel */
+  .stats {
+    background: #16213e; border-radius: 10px;
+    padding: 14px; border: 1px solid #0f3460;
+  }
+  .stats-header {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 10px;
+  }
+  .stats-title { font-size: 1rem; font-weight: bold; color: #f0c040; }
+  .gold-display { font-size: 0.9rem; color: #f0c040; }
+  .gold-display span { font-weight: bold; }
+  .stats-section { margin-top: 10px; }
+  .stats-section-title {
+    font-size: 0.8rem; color: #8899aa;
+    margin-bottom: 6px; border-bottom: 1px solid #0f3460; padding-bottom: 4px;
+  }
+  .hero-list { display: flex; flex-wrap: wrap; gap: 4px; }
+  .hero-tag {
+    font-size: 0.75rem; padding: 3px 8px;
+    border-radius: 4px; white-space: nowrap;
+  }
+  .hero-tag.rare {
+    background: rgba(255,215,0,0.15); color: #ffd700;
+    border: 1px solid rgba(255,215,0,0.3);
+  }
+  .hero-tag.normal {
+    background: rgba(212,168,67,0.1); color: #d4a843;
+    border: 1px solid rgba(212,168,67,0.2);
+  }
+  .empty-msg { font-size: 0.75rem; color: #556677; font-style: italic; }
+  .total-pulls { font-size: 0.75rem; color: #667788; text-align: center; margin-top: 4px; }
+
+  /* Probability modal */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 16px;
+  }
+  .modal {
+    background: #16213e; border-radius: 12px;
+    border: 1px solid #0f3460;
+    max-width: 460px; width: 100%;
+    max-height: 80vh; display: flex; flex-direction: column;
+  }
+  .modal-header {
+    padding: 14px 16px; border-bottom: 1px solid #0f3460;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-header h3 { font-size: 0.95rem; color: #f0c040; }
+  .modal-close {
+    background: none; border: none; color: #8899aa;
+    font-size: 1.2rem; cursor: pointer; padding: 4px 8px;
+  }
+  .modal-close:hover { color: #e0e0e0; }
+  .modal-body {
+    padding: 14px 16px; overflow-y: auto; flex: 1;
+  }
+  .prob-group { margin-bottom: 14px; }
+  .prob-group-title {
+    font-size: 0.8rem; font-weight: bold; margin-bottom: 6px;
+    padding-bottom: 4px; border-bottom: 1px solid #0f3460;
+  }
+  .prob-group-title.g5rare { color: #ffd700; }
+  .prob-group-title.g5 { color: #d4a843; }
+  .prob-group-title.g4 { color: #c39bd3; }
+  .prob-group-title.g3 { color: #7ec8e3; }
+  .prob-group-title.gcollection { color: #2ecc71; }
+  .prob-row {
+    display: flex; justify-content: space-between;
+    font-size: 0.78rem; padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .prob-row .prob-name { color: #cccccc; }
+  .prob-row .prob-val { color: #8899aa; font-family: monospace; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>삼국지전략판 뽑기 시뮬레이터</h1>
+  <div class="subtitle" id="headerSub"></div>
+</div>
+
+<div class="container">
+  <!-- Package selection screen -->
+  <div id="pkgScreen" class="pkg-screen">
+    <div class="pkg-breadcrumb" id="pkgBreadcrumb"></div>
+    <div class="pkg-title" id="pkgTitle">시즌을 선택하세요</div>
+    <div class="pkg-grid" id="pkgGrid"></div>
+  </div>
+
+  <!-- Simulator screen -->
+  <div id="simScreen" class="hidden">
+    <div class="sim-topbar">
+      <div class="sim-pkg-name" id="simPkgName"></div>
+      <button class="btn-change" onclick="goToSelect()">패키지 변경</button>
+    </div>
+
+    <div class="pity-bar">
+      <div class="pity-item">
+        <div class="label">5성 천장</div>
+        <div class="value" id="pity5">0 / 30</div>
+      </div>
+      <div class="pity-item">
+        <div class="label">희귀 천장</div>
+        <div class="value" id="pityRare">0 / 6</div>
+      </div>
+    </div>
+
+    <div class="draw-area" id="drawArea">
+      <div style="color:#556677; font-size:0.9rem;">뽑기 버튼을 눌러주세요</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-draw" id="btnDraw" onclick="doDraw()">뽑기 (5연차)</button>
+      <button class="btn btn-prob" onclick="showProb()">확률표</button>
+      <button class="btn btn-reset" onclick="doReset()">초기화</button>
+    </div>
+
+    <div class="stats">
+      <div class="stats-header">
+        <div class="stats-title">뽑기 현황</div>
+        <div class="gold-display">&#x1F4B0; <span id="goldDisplay">0</span> 금화</div>
+      </div>
+      <div class="total-pulls" id="totalPulls">총 0회 뽑기</div>
+      <div class="stats-section">
+        <div class="stats-section-title">획득한 희귀 5성 장수</div>
+        <div class="hero-list" id="rareList"><span class="empty-msg">아직 없음</span></div>
+      </div>
+      <div class="stats-section">
+        <div class="stats-section-title">획득한 5성 장수</div>
+        <div class="hero-list" id="star5List"><span class="empty-msg">아직 없음</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Probability modal -->
+<div class="modal-overlay hidden" id="probModal" onclick="if(event.target===this)closeProb()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="probTitle">확률표</h3>
+      <button class="modal-close" onclick="closeProb()">&times;</button>
+    </div>
+    <div class="modal-body" id="probBody"></div>
+  </div>
+</div>
+
+<script>
+let DATA;
+async function init() {
+  const resp = await fetch('./data.json');
+  DATA = await resp.json();
+  initApp();
+}
+
+function initApp() {
+// Parse pool data: [name, grade, prob]
+const MENU = DATA.menu; // [[d1,d2,d3,sheetName],...]
+const POOLS = {};
+for (const [k, arr] of Object.entries(DATA.pools)) {
+  POOLS[k] = arr.map(([n, g, p]) => ({ name: n, grade: g, prob: p }));
+}
+
+// --- Package selection ---
+let navPath = []; // current navigation path
+let selectedSheet = null;
+let currentPool = null;
+
+function getUniqueAt(depth) {
+  let filtered = MENU;
+  for (let i = 0; i < depth; i++) {
+    filtered = filtered.filter(m => m[i] === navPath[i]);
+  }
+  const seen = new Set();
+  const items = [];
+  for (const m of filtered) {
+    const val = m[depth];
+    if (!seen.has(val)) {
+      seen.add(val);
+      const count = filtered.filter(mm => mm[depth] === val).length;
+      items.push({ label: val, count });
+    }
+  }
+  return items;
+}
+
+function getSheetForPath(d1, d2, d3) {
+  const m = MENU.find(m => m[0] === d1 && m[1] === d2 && m[2] === d3);
+  return m ? m[3] : null;
+}
+
+function renderPkgScreen() {
+  const depth = navPath.length;
+  const bc = document.getElementById('pkgBreadcrumb');
+  const title = document.getElementById('pkgTitle');
+  const grid = document.getElementById('pkgGrid');
+
+  // Breadcrumb
+  let bcHtml = '';
+  if (depth > 0) {
+    bcHtml += '<span class="crumb" onclick="navTo(-1)">처음</span>';
+    for (let i = 0; i < depth; i++) {
+      bcHtml += '<span class="sep">›</span>';
+      if (i < depth - 1) {
+        bcHtml += '<span class="crumb" onclick="navTo(' + i + ')">' + navPath[i] + '</span>';
+      } else {
+        bcHtml += '<span class="current">' + navPath[i] + '</span>';
+      }
+    }
+  }
+  bc.innerHTML = bcHtml;
+
+  // Title
+  const titles = ['시즌을 선택하세요', '카테고리를 선택하세요', '패키지를 선택하세요'];
+  title.textContent = titles[depth] || '패키지를 선택하세요';
+
+  // Grid
+  const items = getUniqueAt(depth);
+  grid.innerHTML = items.map(item => {
+    const countLabel = depth < 2 ? '<span class="pkg-count">(' + item.count + ')</span>' : '';
+    return '<button class="pkg-btn" onclick="selectDepth(' + depth + ',\'' + item.label.replace(/'/g, "\\'") + '\')">' + item.label + countLabel + '</button>';
+  }).join('');
+}
+
+function selectDepth(depth, value) {
+  navPath[depth] = value;
+  navPath.length = depth + 1;
+
+  if (depth === 2) {
+    // Final selection
+    const sheet = getSheetForPath(navPath[0], navPath[1], navPath[2]);
+    if (sheet && POOLS[sheet]) {
+      startSim(sheet, navPath.slice());
+    }
+  } else {
+    renderPkgScreen();
+  }
+}
+
+function navTo(index) {
+  if (index === -1) {
+    navPath = [];
+  } else {
+    navPath.length = index + 1;
+  }
+  renderPkgScreen();
+}
+
+function goToSelect() {
+  if (state.drawing) return;
+  // Go back to depth2 level (show package list)
+  if (navPath.length > 2) navPath.length = 2;
+  document.getElementById('pkgScreen').classList.remove('hidden');
+  document.getElementById('simScreen').classList.add('hidden');
+  document.getElementById('headerSub').textContent = '';
+  renderPkgScreen();
+}
+
+// --- Simulator ---
+let POOL_5RARE, POOL_5, TOTAL_5RARE_PROB, TOTAL_5_PROB;
+let hasRareGrade = false;
+
+let state = {
+  pullCount: 0, pity5Count: 0, pityRareCount: 0,
+  gold: 0, acquired5: {}, acquired5Rare: {}, drawing: false
+};
+
+function startSim(sheetName, path) {
+  selectedSheet = sheetName;
+  currentPool = POOLS[sheetName];
+
+  POOL_5RARE = currentPool.filter(h => h.grade === '5rare');
+  POOL_5 = currentPool.filter(h => h.grade === '5');
+  TOTAL_5RARE_PROB = POOL_5RARE.reduce((s, h) => s + h.prob, 0);
+  TOTAL_5_PROB = POOL_5.reduce((s, h) => s + h.prob, 0);
+  hasRareGrade = POOL_5RARE.length > 0;
+
+  // Reset state
+  state = {
+    pullCount: 0, pity5Count: 0, pityRareCount: 0,
+    gold: 0, acquired5: {}, acquired5Rare: {}, drawing: false
+  };
+
+  // Update UI
+  document.getElementById('pkgScreen').classList.add('hidden');
+  document.getElementById('simScreen').classList.remove('hidden');
+
+  const pathStr = path.join(' > ');
+  document.getElementById('simPkgName').innerHTML = '<span>' + pathStr + '</span>';
+  document.getElementById('headerSub').textContent = pathStr;
+
+  // Show/hide pity bar based on whether rare grade exists
+  const pityBar = document.querySelector('.pity-bar');
+  if (!hasRareGrade) {
+    pityBar.classList.add('hidden');
+  } else {
+    pityBar.classList.remove('hidden');
+  }
+
+  document.getElementById('drawArea').innerHTML = '<div style="color:#556677; font-size:0.9rem;">뽑기 버튼을 눌러주세요</div>';
+  updateUI();
+}
+
+function weightedRandom(pool) {
+  const totalProb = pool.reduce((s, h) => s + h.prob, 0);
+  let r = Math.random() * totalProb;
+  for (const hero of pool) {
+    r -= hero.prob;
+    if (r <= 0) return hero;
+  }
+  return pool[pool.length - 1];
+}
+
+function pickFrom5StarPool() {
+  const totalProb = TOTAL_5RARE_PROB + TOTAL_5_PROB;
+  if (Math.random() < TOTAL_5RARE_PROB / totalProb) {
+    return { ...weightedRandom(POOL_5RARE), grade: '5rare' };
+  } else {
+    return { ...weightedRandom(POOL_5), grade: '5' };
+  }
+}
+
+function pickRare5Star() {
+  return { ...weightedRandom(POOL_5RARE), grade: '5rare' };
+}
+
+function singlePull() {
+  state.pullCount++;
+  state.pity5Count++;
+  let result;
+  let isPity = false;
+
+  if (hasRareGrade && state.pity5Count >= 30) {
+    isPity = true;
+    if (state.pityRareCount >= 5) {
+      result = pickRare5Star();
+    } else {
+      result = pickFrom5StarPool();
+    }
+  } else if (!hasRareGrade && state.pity5Count >= 30) {
+    // Pools without rare: just guarantee any 5-star
+    isPity = true;
+    const all5 = currentPool.filter(h => h.grade === '5' || h.grade === '5rare');
+    result = weightedRandom(all5);
+  } else {
+    result = weightedRandom(currentPool);
+  }
+
+  // Post-pull pity logic
+  if (result.grade === '5rare') {
+    state.pity5Count = 0;
+    state.pityRareCount = 0;
+    state.acquired5Rare[result.name] = (state.acquired5Rare[result.name] || 0) + 1;
+  } else if (result.grade === '5') {
+    state.pity5Count = 0;
+    if (hasRareGrade) {
+      state.pityRareCount++;
+      if (state.pityRareCount >= 6) {
+        result = pickRare5Star();
+        isPity = true;
+        state.pityRareCount = 0;
+        state.acquired5Rare[result.name] = (state.acquired5Rare[result.name] || 0) + 1;
+      } else {
+        state.acquired5[result.name] = (state.acquired5[result.name] || 0) + 1;
+      }
+    } else {
+      state.acquired5[result.name] = (state.acquired5[result.name] || 0) + 1;
+    }
+  }
+
+  return { hero: result, isPity };
+}
+
+function updateUI() {
+  if (hasRareGrade) {
+    document.getElementById('pity5').textContent = state.pity5Count + ' / 30';
+    document.getElementById('pityRare').textContent = state.pityRareCount + ' / 6';
+    const p5el = document.getElementById('pity5');
+    const pRel = document.getElementById('pityRare');
+    p5el.className = 'value' + (state.pity5Count >= 25 ? ' warn' : '');
+    pRel.className = 'value' + (state.pityRareCount >= 5 ? ' warn' : '');
+  }
+
+  document.getElementById('goldDisplay').textContent = state.gold.toLocaleString();
+  document.getElementById('totalPulls').textContent = '총 ' + state.pullCount + '회 뽑기';
+
+  const rareListEl = document.getElementById('rareList');
+  const rareEntries = Object.entries(state.acquired5Rare);
+  rareListEl.innerHTML = rareEntries.length === 0
+    ? '<span class="empty-msg">아직 없음</span>'
+    : rareEntries.map(([n, c]) => '<span class="hero-tag rare">' + n + (c > 1 ? ' x' + c : '') + '</span>').join('');
+
+  const star5ListEl = document.getElementById('star5List');
+  const star5Entries = Object.entries(state.acquired5);
+  star5ListEl.innerHTML = star5Entries.length === 0
+    ? '<span class="empty-msg">아직 없음</span>'
+    : star5Entries.map(([n, c]) => '<span class="hero-tag normal">' + n + (c > 1 ? ' x' + c : '') + '</span>').join('');
+}
+
+function gradeToClass(g) {
+  if (g === '5rare') return 'star5rare';
+  if (g === '5') return 'star5';
+  if (g === '4') return 'star4';
+  if (g === 'collection') return 'collection';
+  return 'star3';
+}
+function gradeToStars(g) {
+  if (g === '5rare' || g === '5') return '\u2605\u2605\u2605\u2605\u2605';
+  if (g === '4') return '\u2605\u2605\u2605\u2605';
+  if (g === 'collection') return '\u2605';
+  return '\u2605\u2605\u2605';
+}
+function gradeLabel(g) {
+  if (g === '5rare') return '희귀';
+  if (g === 'collection') return '컬렉션';
+  return '';
+}
+
+async function doDraw() {
+  if (state.drawing) return;
+  state.drawing = true;
+  document.getElementById('btnDraw').disabled = true;
+
+  state.gold += 948;
+  const results = [];
+  for (let i = 0; i < 5; i++) results.push(singlePull());
+
+  const area = document.getElementById('drawArea');
+  area.innerHTML = '';
+  const row1 = document.createElement('div');
+  row1.className = 'draw-row';
+  const row2 = document.createElement('div');
+  row2.className = 'draw-row';
+  area.appendChild(row1);
+  area.appendChild(row2);
+
+  for (let i = 0; i < 5; i++) {
+    const { hero, isPity } = results[i];
+    const card = document.createElement('div');
+    card.className = 'card ' + gradeToClass(hero.grade);
+    const label = gradeLabel(hero.grade);
+    card.innerHTML =
+      '<div class="star">' + gradeToStars(hero.grade) + '</div>' +
+      (label ? '<div style="font-size:0.6rem;color:#ffd700;">' + label + '</div>' : '') +
+      '<div class="name">' + hero.name + '</div>' +
+      (isPity ? '<div class="pity-tag">천장</div>' : '');
+    (i < 3 ? row1 : row2).appendChild(card);
+    await new Promise(r => setTimeout(r, 300));
+    card.classList.add('revealed');
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  updateUI();
+  state.drawing = false;
+  document.getElementById('btnDraw').disabled = false;
+}
+
+function doReset() {
+  if (state.drawing) return;
+  state.pullCount = 0;
+  state.pity5Count = 0;
+  state.pityRareCount = 0;
+  state.gold = 0;
+  state.acquired5 = {};
+  state.acquired5Rare = {};
+  document.getElementById('drawArea').innerHTML = '<div style="color:#556677; font-size:0.9rem;">뽑기 버튼을 눌러주세요</div>';
+  updateUI();
+}
+
+// --- Probability modal ---
+function showProb() {
+  if (!currentPool) return;
+  const modal = document.getElementById('probModal');
+  const body = document.getElementById('probBody');
+  document.getElementById('probTitle').textContent = '확률표';
+
+  const groups = {};
+  const order = ['5rare', '5', '4', '3', 'collection'];
+  const labels = { '5rare': '5성 희귀 장수', '5': '5성 장수', '4': '4성 장수', '3': '3성 장수', 'collection': '컬렉션' };
+
+  for (const h of currentPool) {
+    if (!groups[h.grade]) groups[h.grade] = [];
+    groups[h.grade].push(h);
+  }
+
+  let html = '';
+  for (const g of order) {
+    if (!groups[g]) continue;
+    const cls = 'g' + g.replace('5rare', '5rare');
+    html += '<div class="prob-group">';
+    html += '<div class="prob-group-title ' + cls + '">' + labels[g] + ' (' + groups[g].length + '명)</div>';
+    for (const h of groups[g]) {
+      html += '<div class="prob-row"><span class="prob-name">' + h.name + '</span><span class="prob-val">' + (h.prob * 100).toFixed(4) + '%</span></div>';
+    }
+    html += '</div>';
+  }
+  body.innerHTML = html;
+  modal.classList.remove('hidden');
+}
+
+function closeProb() {
+  document.getElementById('probModal').classList.add('hidden');
+}
+
+// Expose functions to global scope for onclick handlers
+window.selectDepth = selectDepth;
+window.navTo = navTo;
+window.goToSelect = goToSelect;
+window.doDraw = doDraw;
+window.doReset = doReset;
+window.showProb = showProb;
+window.closeProb = closeProb;
+
+renderPkgScreen();
+} // end initApp
+
+init();
+</script>
+</body>
+</html>
