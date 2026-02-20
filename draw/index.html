@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>삼국지전략판 뽑기 시뮬레이터</title>
+<title>삼전판 뽑기 시뮬 by. 新星논알콜</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -130,12 +130,13 @@
   .pity-item .value { font-size: 1.1rem; font-weight: bold; margin-top: 2px; }
   .pity-item .value.warn { color: #ff6b6b; }
 
-  /* Draw area: 3 top + 2 bottom centered */
+  /* Draw area */
   .draw-area {
-    min-height: 200px;
+    min-height: 140px;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     padding: 10px 0;
   }
@@ -144,53 +145,161 @@
     justify-content: center;
     gap: 8px;
   }
-  .card {
+  /* Card flip container */
+  .card-slot {
+    perspective: 600px;
     width: 80px; height: 110px;
+  }
+  .card-slot.single { width: 100px; height: 140px; }
+  .card-inner {
+    position: relative;
+    width: 100%; height: 100%;
+    transition: transform 0.3s ease;
+    transform-style: preserve-3d;
+  }
+  .card-inner.flipped { transform: rotateY(180deg); }
+  .card-back, .card-front {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    backface-visibility: hidden;
     border-radius: 8px;
+  }
+  /* Card back */
+  .card-back {
+    background: linear-gradient(145deg, #2a2a3e, #1a1a2e);
+    border: 2px solid #444466;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+  }
+  .card-back .silhouette {
+    width: 50px; height: 65px;
+    background: radial-gradient(ellipse at center, rgba(80,80,120,0.4) 0%, transparent 70%);
+    border-radius: 50% 50% 40% 40%;
+    position: relative;
+  }
+  .card-back .silhouette::after {
+    content: '?';
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem; color: rgba(100,100,140,0.5); font-weight: bold;
+  }
+  .card-slot.single .card-back .silhouette { width: 65px; height: 80px; }
+  .card-slot.single .card-back .silhouette::after { font-size: 2rem; }
+  /* Card back glow hint for 5-star */
+  .card-back.hint-5star {
+    border-color: #b8860b;
+    box-shadow: 0 0 20px rgba(255,215,0,0.3), 0 4px 15px rgba(0,0,0,0.4);
+    animation: backGlow5 1.5s ease-in-out infinite;
+  }
+  .card-back.hint-5rare {
+    border-color: #ffd700;
+    box-shadow: 0 0 30px rgba(255,215,0,0.5), 0 4px 15px rgba(0,0,0,0.4);
+    animation: backGlow5rare 1.2s ease-in-out infinite;
+  }
+  @keyframes backGlow5 {
+    0%, 100% { box-shadow: 0 0 15px rgba(255,215,0,0.2), 0 4px 15px rgba(0,0,0,0.4); }
+    50% { box-shadow: 0 0 30px rgba(255,215,0,0.5), 0 4px 15px rgba(0,0,0,0.4); }
+  }
+  @keyframes backGlow5rare {
+    0%, 100% { box-shadow: 0 0 25px rgba(255,215,0,0.4), 0 4px 15px rgba(0,0,0,0.4); }
+    50% { box-shadow: 0 0 45px rgba(255,215,0,0.7), 0 4px 15px rgba(0,0,0,0.4); }
+  }
+
+  /* Card front */
+  .card-front {
+    transform: rotateY(180deg);
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     font-size: 0.75rem; font-weight: bold;
-    opacity: 0;
-    transform: scale(0.3) rotateY(180deg);
-    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-    position: relative; text-align: center;
-    padding: 6px;
+    text-align: center; padding: 6px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
   }
-  .card.revealed { opacity: 1; transform: scale(1) rotateY(0deg); }
-  .card .star { font-size: 0.65rem; margin-bottom: 4px; }
-  .card .name { font-size: 0.85rem; line-height: 1.2; }
-  .card .pity-tag {
+  .card-slot.single .card-front { font-size: 0.85rem; }
+  .card-front .star { font-size: 0.65rem; margin-bottom: 4px; }
+  .card-slot.single .card-front .star { font-size: 0.75rem; }
+  .card-front .name { font-size: 0.85rem; line-height: 1.2; }
+  .card-slot.single .card-front .name { font-size: 1rem; }
+  .card-front .pity-tag {
     position: absolute; bottom: 4px;
     font-size: 0.55rem;
     background: rgba(0,0,0,0.5);
     padding: 1px 5px; border-radius: 4px;
     color: #ff6b6b;
   }
-  .card.star3 {
+
+  /* 5-star aura after reveal */
+  .card-slot.aura-5star .card-front {
+    animation: aura5 2s ease-in-out infinite;
+  }
+  .card-slot.aura-5rare .card-front {
+    animation: aura5rare 1.8s ease-in-out infinite;
+  }
+  .card-slot.aura-collection-rare .card-front {
+    animation: auraColRare 1.8s ease-in-out infinite;
+  }
+  @keyframes aura5 {
+    0%, 100% { box-shadow: 0 0 12px rgba(212,168,67,0.3), 0 4px 15px rgba(0,0,0,0.3); }
+    50% { box-shadow: 0 0 25px rgba(212,168,67,0.6), 0 0 50px rgba(212,168,67,0.2), 0 4px 15px rgba(0,0,0,0.3); }
+  }
+  @keyframes aura5rare {
+    0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.5), 0 4px 15px rgba(0,0,0,0.3); }
+    50% { box-shadow: 0 0 35px rgba(255,215,0,0.8), 0 0 60px rgba(255,215,0,0.3), 0 4px 15px rgba(0,0,0,0.3); }
+  }
+  @keyframes auraColRare {
+    0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.4), 0 0 12px rgba(46,204,113,0.3); }
+    50% { box-shadow: 0 0 35px rgba(255,215,0,0.7), 0 0 25px rgba(46,204,113,0.5), 0 0 60px rgba(255,215,0,0.2); }
+  }
+
+  /* Golden flash overlay */
+  .golden-flash {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 50; pointer-events: none;
+    background: radial-gradient(circle at var(--fx, 50%) var(--fy, 50%), rgba(255,215,0,0.9) 0%, rgba(255,180,0,0.4) 30%, transparent 70%);
+    opacity: 0;
+    animation: flashBurst 0.8s ease-out forwards;
+  }
+  @keyframes flashBurst {
+    0% { opacity: 0; transform: scale(0.3); }
+    15% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.5); }
+  }
+
+  /* Card slot appear animation */
+  .card-slot {
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  .card-slot.visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .card-front.star3 {
     background: linear-gradient(145deg, #1a3a5c, #0d253f);
     border: 2px solid #2980b9; color: #7ec8e3;
   }
-  .card.star4 {
+  .card-front.star4 {
     background: linear-gradient(145deg, #3a1a5c, #250d3f);
     border: 2px solid #8e44ad; color: #c39bd3;
   }
-  .card.star5 {
+  .card-front.star5 {
     background: linear-gradient(145deg, #5c4a1a, #3f350d);
     border: 2px solid #d4a843; color: #f5deb3;
-    box-shadow: 0 0 12px rgba(212,168,67,0.3);
   }
-  .card.star5rare {
+  .card-front.star5rare {
     background: linear-gradient(145deg, #7a5a00, #5c3d00);
     border: 2px solid #ffd700; color: #fff8dc;
-    box-shadow: 0 0 20px rgba(255,215,0,0.5);
   }
-  .card.star5rare .name { color: #ffd700; }
-  .card.collection {
+  .card-front.star5rare .name { color: #ffd700; }
+  .card-front.collection {
     background: linear-gradient(145deg, #1a4a3a, #0d3f2a);
     border: 2px solid #2ecc71; color: #a9dfbf;
-    box-shadow: 0 0 12px rgba(46,204,113,0.3);
   }
+  .card-front.collection_rare {
+    background: linear-gradient(145deg, #2a6a3a, #1a5a2a);
+    border: 2px solid #ffd700; color: #e0ffe0;
+  }
+  .card-front.collection_rare .name { color: #ffd700; }
 
   /* Buttons */
   .btn-row { display: flex; gap: 8px; }
@@ -223,8 +332,8 @@
     align-items: center; margin-bottom: 10px;
   }
   .stats-title { font-size: 1rem; font-weight: bold; color: #f0c040; }
-  .gold-display { font-size: 0.9rem; color: #f0c040; }
-  .gold-display span { font-weight: bold; }
+  .cost-display { font-size: 0.9rem; color: #f0c040; }
+  .cost-display span { font-weight: bold; }
   .stats-section { margin-top: 10px; }
   .stats-section-title {
     font-size: 0.8rem; color: #8899aa;
@@ -242,6 +351,14 @@
   .hero-tag.normal {
     background: rgba(212,168,67,0.1); color: #d4a843;
     border: 1px solid rgba(212,168,67,0.2);
+  }
+  .hero-tag.col-rare {
+    background: rgba(255,215,0,0.12); color: #a0e8a0;
+    border: 1px solid rgba(255,215,0,0.3);
+  }
+  .hero-tag.col-normal {
+    background: rgba(46,204,113,0.1); color: #2ecc71;
+    border: 1px solid rgba(46,204,113,0.2);
   }
   .empty-msg { font-size: 0.75rem; color: #556677; font-style: italic; }
   .total-pulls { font-size: 0.75rem; color: #667788; text-align: center; margin-top: 4px; }
@@ -281,6 +398,7 @@
   .prob-group-title.g5 { color: #d4a843; }
   .prob-group-title.g4 { color: #c39bd3; }
   .prob-group-title.g3 { color: #7ec8e3; }
+  .prob-group-title.gcollection_rare { color: #ffd700; }
   .prob-group-title.gcollection { color: #2ecc71; }
   .prob-row {
     display: flex; justify-content: space-between;
@@ -294,7 +412,7 @@
 <body>
 
 <div class="header">
-  <h1>삼국지전략판 뽑기 시뮬레이터</h1>
+  <h1>삼전판 뽑기 시뮬 by. 新星논알콜</h1>
   <div class="subtitle" id="headerSub"></div>
 </div>
 
@@ -313,16 +431,7 @@
       <button class="btn-change" onclick="goToSelect()">패키지 변경</button>
     </div>
 
-    <div class="pity-bar">
-      <div class="pity-item">
-        <div class="label">5성 천장</div>
-        <div class="value" id="pity5">0 / 30</div>
-      </div>
-      <div class="pity-item">
-        <div class="label">희귀 천장</div>
-        <div class="value" id="pityRare">0 / 6</div>
-      </div>
-    </div>
+    <div class="pity-bar" id="pityBar"></div>
 
     <div class="draw-area" id="drawArea">
       <div style="color:#556677; font-size:0.9rem;">뽑기 버튼을 눌러주세요</div>
@@ -334,21 +443,7 @@
       <button class="btn btn-reset" onclick="doReset()">초기화</button>
     </div>
 
-    <div class="stats">
-      <div class="stats-header">
-        <div class="stats-title">뽑기 현황</div>
-        <div class="gold-display">&#x1F4B0; <span id="goldDisplay">0</span> 금화</div>
-      </div>
-      <div class="total-pulls" id="totalPulls">총 0회 뽑기</div>
-      <div class="stats-section">
-        <div class="stats-section-title">획득한 희귀 5성 장수</div>
-        <div class="hero-list" id="rareList"><span class="empty-msg">아직 없음</span></div>
-      </div>
-      <div class="stats-section">
-        <div class="stats-section-title">획득한 5성 장수</div>
-        <div class="hero-list" id="star5List"><span class="empty-msg">아직 없음</span></div>
-      </div>
-    </div>
+    <div class="stats" id="statsPanel"></div>
   </div>
 </div>
 
@@ -372,17 +467,24 @@ async function init() {
 }
 
 function initApp() {
-// Parse pool data: [name, grade, prob]
-const MENU = DATA.menu; // [[d1,d2,d3,sheetName],...]
+const MENU = DATA.menu;
 const POOLS = {};
 for (const [k, arr] of Object.entries(DATA.pools)) {
   POOLS[k] = arr.map(([n, g, p]) => ({ name: n, grade: g, prob: p }));
 }
 
+// --- Package type detection ---
+function getPackageType(path) {
+  if (path[2] === '컬렉션') return 'collection';
+  if (path[1].includes('시즌 보상')) return 'season_reward';
+  return 'normal';
+}
+
 // --- Package selection ---
-let navPath = []; // current navigation path
+let navPath = [];
 let selectedSheet = null;
 let currentPool = null;
+let pkgType = 'normal';
 
 function getUniqueAt(depth) {
   let filtered = MENU;
@@ -413,7 +515,6 @@ function renderPkgScreen() {
   const title = document.getElementById('pkgTitle');
   const grid = document.getElementById('pkgGrid');
 
-  // Breadcrumb
   let bcHtml = '';
   if (depth > 0) {
     bcHtml += '<span class="crumb" onclick="navTo(-1)">처음</span>';
@@ -428,11 +529,9 @@ function renderPkgScreen() {
   }
   bc.innerHTML = bcHtml;
 
-  // Title
   const titles = ['시즌을 선택하세요', '카테고리를 선택하세요', '패키지를 선택하세요'];
   title.textContent = titles[depth] || '패키지를 선택하세요';
 
-  // Grid
   const items = getUniqueAt(depth);
   grid.innerHTML = items.map(item => {
     const countLabel = depth < 2 ? '<span class="pkg-count">(' + item.count + ')</span>' : '';
@@ -443,9 +542,7 @@ function renderPkgScreen() {
 function selectDepth(depth, value) {
   navPath[depth] = value;
   navPath.length = depth + 1;
-
   if (depth === 2) {
-    // Final selection
     const sheet = getSheetForPath(navPath[0], navPath[1], navPath[2]);
     if (sheet && POOLS[sheet]) {
       startSim(sheet, navPath.slice());
@@ -456,17 +553,12 @@ function selectDepth(depth, value) {
 }
 
 function navTo(index) {
-  if (index === -1) {
-    navPath = [];
-  } else {
-    navPath.length = index + 1;
-  }
+  if (index === -1) { navPath = []; } else { navPath.length = index + 1; }
   renderPkgScreen();
 }
 
 function goToSelect() {
   if (state.drawing) return;
-  // Go back to depth2 level (show package list)
   if (navPath.length > 2) navPath.length = 2;
   document.getElementById('pkgScreen').classList.remove('hidden');
   document.getElementById('simScreen').classList.add('hidden');
@@ -474,51 +566,119 @@ function goToSelect() {
   renderPkgScreen();
 }
 
-// --- Simulator ---
+// --- Simulator state ---
 let POOL_5RARE, POOL_5, TOTAL_5RARE_PROB, TOTAL_5_PROB;
+let POOL_CRARE, POOL_C;
 let hasRareGrade = false;
 
 let state = {
   pullCount: 0, pity5Count: 0, pityRareCount: 0,
-  gold: 0, acquired5: {}, acquired5Rare: {}, drawing: false
+  gold: 0, heroesConsumed: 0, remainingDraws: 20,
+  acquired5: {}, acquired5Rare: {}, drawing: false
 };
 
+// --- Start simulator ---
 function startSim(sheetName, path) {
   selectedSheet = sheetName;
   currentPool = POOLS[sheetName];
+  pkgType = getPackageType(path);
 
-  POOL_5RARE = currentPool.filter(h => h.grade === '5rare');
-  POOL_5 = currentPool.filter(h => h.grade === '5');
-  TOTAL_5RARE_PROB = POOL_5RARE.reduce((s, h) => s + h.prob, 0);
-  TOTAL_5_PROB = POOL_5.reduce((s, h) => s + h.prob, 0);
-  hasRareGrade = POOL_5RARE.length > 0;
-
-  // Reset state
   state = {
     pullCount: 0, pity5Count: 0, pityRareCount: 0,
-    gold: 0, acquired5: {}, acquired5Rare: {}, drawing: false
+    gold: 0, heroesConsumed: 0, remainingDraws: 20,
+    acquired5: {}, acquired5Rare: {}, drawing: false
   };
 
-  // Update UI
+  if (pkgType === 'normal') {
+    POOL_5RARE = currentPool.filter(h => h.grade === '5rare');
+    POOL_5 = currentPool.filter(h => h.grade === '5');
+    TOTAL_5RARE_PROB = POOL_5RARE.reduce((s, h) => s + h.prob, 0);
+    TOTAL_5_PROB = POOL_5.reduce((s, h) => s + h.prob, 0);
+    hasRareGrade = POOL_5RARE.length > 0;
+  } else if (pkgType === 'collection') {
+    POOL_CRARE = currentPool.filter(h => h.grade === 'collection_rare');
+    POOL_C = currentPool.filter(h => h.grade === 'collection');
+  }
+
+  // Configure UI
+  setupPityBar();
+  setupDrawButton();
+  setupStatsPanel();
+
   document.getElementById('pkgScreen').classList.add('hidden');
   document.getElementById('simScreen').classList.remove('hidden');
-
   const pathStr = path.join(' > ');
   document.getElementById('simPkgName').innerHTML = '<span>' + pathStr + '</span>';
   document.getElementById('headerSub').textContent = pathStr;
-
-  // Show/hide pity bar based on whether rare grade exists
-  const pityBar = document.querySelector('.pity-bar');
-  if (!hasRareGrade) {
-    pityBar.classList.add('hidden');
-  } else {
-    pityBar.classList.remove('hidden');
-  }
-
   document.getElementById('drawArea').innerHTML = '<div style="color:#556677; font-size:0.9rem;">뽑기 버튼을 눌러주세요</div>';
   updateUI();
 }
 
+function setupPityBar() {
+  const bar = document.getElementById('pityBar');
+  if (pkgType === 'normal') {
+    if (hasRareGrade) {
+      bar.innerHTML =
+        '<div class="pity-item"><div class="label">5성 천장</div><div class="value" id="pity5">0 / 30</div></div>' +
+        '<div class="pity-item"><div class="label">희귀 천장</div><div class="value" id="pityRare">0 / 6</div></div>';
+    } else {
+      bar.innerHTML =
+        '<div class="pity-item"><div class="label">5성 천장</div><div class="value" id="pity5">0 / 30</div></div>';
+    }
+    bar.classList.remove('hidden');
+  } else if (pkgType === 'collection') {
+    bar.innerHTML =
+      '<div class="pity-item"><div class="label">희귀 천장</div><div class="value" id="pityRare">0 / 6</div></div>';
+    bar.classList.remove('hidden');
+  } else if (pkgType === 'season_reward') {
+    bar.innerHTML =
+      '<div class="pity-item"><div class="label">남은 뽑기</div><div class="value" id="remainDraws">20 / 20</div></div>' +
+      '<div class="pity-item"><div class="label">5성 천장</div><div class="value" id="pity5">0 / 10</div></div>';
+    bar.classList.remove('hidden');
+  }
+}
+
+function setupDrawButton() {
+  const btn = document.getElementById('btnDraw');
+  btn.disabled = false;
+  if (pkgType === 'normal') btn.textContent = '뽑기 (5연차)';
+  else if (pkgType === 'collection') btn.textContent = '뽑기 (5성장수 8장 소모)';
+  else if (pkgType === 'season_reward') btn.textContent = '뽑기 (1회)';
+}
+
+function setupStatsPanel() {
+  const panel = document.getElementById('statsPanel');
+  if (pkgType === 'normal') {
+    panel.innerHTML =
+      '<div class="stats-header"><div class="stats-title">뽑기 현황</div>' +
+      '<div class="cost-display">\uD83D\uDCB0 <span id="costDisplay">0</span> 금화</div></div>' +
+      '<div class="total-pulls" id="totalPulls">총 0회 뽑기</div>' +
+      '<div class="stats-section"><div class="stats-section-title">획득한 희귀 5성 장수</div>' +
+      '<div class="hero-list" id="rareList"><span class="empty-msg">아직 없음</span></div></div>' +
+      '<div class="stats-section"><div class="stats-section-title">획득한 5성 장수</div>' +
+      '<div class="hero-list" id="normalList"><span class="empty-msg">아직 없음</span></div></div>';
+  } else if (pkgType === 'collection') {
+    panel.innerHTML =
+      '<div class="stats-header"><div class="stats-title">뽑기 현황</div>' +
+      '<div class="cost-display">\u2B50 소모 5성장수: <span id="costDisplay">0</span>장</div></div>' +
+      '<div class="total-pulls" id="totalPulls">총 0회 뽑기</div>' +
+      '<div class="stats-section"><div class="stats-section-title">획득한 희귀 컬렉션 장수</div>' +
+      '<div class="hero-list" id="rareList"><span class="empty-msg">아직 없음</span></div></div>' +
+      '<div class="stats-section"><div class="stats-section-title">획득한 컬렉션 장수</div>' +
+      '<div class="hero-list" id="normalList"><span class="empty-msg">아직 없음</span></div></div>';
+  } else if (pkgType === 'season_reward') {
+    panel.innerHTML =
+      '<div class="stats-header"><div class="stats-title">뽑기 현황</div>' +
+      '<div class="cost-display">남은 뽑기: <span id="costDisplay">20</span>회</div></div>' +
+      '<div class="total-pulls" id="totalPulls">총 0회 뽑기</div>' +
+      '<div class="stats-section"><div class="stats-section-title">획득한 5성 장수</div>' +
+      '<div class="hero-list" id="rareList"><span class="empty-msg">아직 없음</span></div></div>' +
+      '<div class="stats-section"><div class="stats-section-title">획득한 4성 장수</div>' +
+      '<div class="hero-list" id="normalList"><span class="empty-msg">아직 없음</span></div></div>';
+  }
+}
+
+// --- Weighted random ---
 function weightedRandom(pool) {
   const totalProb = pool.reduce((s, h) => s + h.prob, 0);
   let r = Math.random() * totalProb;
@@ -529,34 +689,23 @@ function weightedRandom(pool) {
   return pool[pool.length - 1];
 }
 
-function pickFrom5StarPool() {
-  const totalProb = TOTAL_5RARE_PROB + TOTAL_5_PROB;
-  if (Math.random() < TOTAL_5RARE_PROB / totalProb) {
-    return { ...weightedRandom(POOL_5RARE), grade: '5rare' };
-  } else {
-    return { ...weightedRandom(POOL_5), grade: '5' };
-  }
-}
-
-function pickRare5Star() {
-  return { ...weightedRandom(POOL_5RARE), grade: '5rare' };
-}
-
-function singlePull() {
+// --- Normal package pull ---
+function normalPull() {
   state.pullCount++;
   state.pity5Count++;
-  let result;
-  let isPity = false;
+  let result, isPity = false;
 
   if (hasRareGrade && state.pity5Count >= 30) {
     isPity = true;
     if (state.pityRareCount >= 5) {
-      result = pickRare5Star();
+      result = { ...weightedRandom(POOL_5RARE), grade: '5rare' };
     } else {
-      result = pickFrom5StarPool();
+      const total = TOTAL_5RARE_PROB + TOTAL_5_PROB;
+      result = Math.random() < TOTAL_5RARE_PROB / total
+        ? { ...weightedRandom(POOL_5RARE), grade: '5rare' }
+        : { ...weightedRandom(POOL_5), grade: '5' };
     }
   } else if (!hasRareGrade && state.pity5Count >= 30) {
-    // Pools without rare: just guarantee any 5-star
     isPity = true;
     const all5 = currentPool.filter(h => h.grade === '5' || h.grade === '5rare');
     result = weightedRandom(all5);
@@ -564,7 +713,6 @@ function singlePull() {
     result = weightedRandom(currentPool);
   }
 
-  // Post-pull pity logic
   if (result.grade === '5rare') {
     state.pity5Count = 0;
     state.pityRareCount = 0;
@@ -574,7 +722,7 @@ function singlePull() {
     if (hasRareGrade) {
       state.pityRareCount++;
       if (state.pityRareCount >= 6) {
-        result = pickRare5Star();
+        result = { ...weightedRandom(POOL_5RARE), grade: '5rare' };
         isPity = true;
         state.pityRareCount = 0;
         state.acquired5Rare[result.name] = (state.acquired5Rare[result.name] || 0) + 1;
@@ -589,99 +737,307 @@ function singlePull() {
   return { hero: result, isPity };
 }
 
-function updateUI() {
-  if (hasRareGrade) {
-    document.getElementById('pity5').textContent = state.pity5Count + ' / 30';
-    document.getElementById('pityRare').textContent = state.pityRareCount + ' / 6';
-    const p5el = document.getElementById('pity5');
-    const pRel = document.getElementById('pityRare');
-    p5el.className = 'value' + (state.pity5Count >= 25 ? ' warn' : '');
-    pRel.className = 'value' + (state.pityRareCount >= 5 ? ' warn' : '');
+// --- Collection package pull ---
+function collectionPull() {
+  state.pullCount++;
+  state.heroesConsumed += 8;
+  let result, isPity = false;
+
+  result = weightedRandom(currentPool);
+
+  if (result.grade === 'collection_rare') {
+    state.pityRareCount = 0;
+    state.acquired5Rare[result.name] = (state.acquired5Rare[result.name] || 0) + 1;
+  } else {
+    // Non-rare: increment pity, check if 6th consecutive → convert to rare
+    state.pityRareCount++;
+    if (state.pityRareCount >= 6) {
+      result = { ...weightedRandom(POOL_CRARE), grade: 'collection_rare' };
+      isPity = true;
+      state.pityRareCount = 0;
+      state.acquired5Rare[result.name] = (state.acquired5Rare[result.name] || 0) + 1;
+    } else {
+      state.acquired5[result.name] = (state.acquired5[result.name] || 0) + 1;
+    }
   }
 
-  document.getElementById('goldDisplay').textContent = state.gold.toLocaleString();
+  return { hero: result, isPity };
+}
+
+// --- Season reward package pull ---
+function seasonRewardPull() {
+  state.pullCount++;
+  state.remainingDraws--;
+  state.pity5Count++;
+  let result, isPity = false;
+
+  // Pity: 10 pulls without 5-star → guarantee 5-star
+  if (state.pity5Count >= 10) {
+    isPity = true;
+    const pool5 = currentPool.filter(h => h.grade === '5');
+    result = weightedRandom(pool5);
+  } else {
+    result = weightedRandom(currentPool);
+  }
+
+  if (result.grade === '5') {
+    state.pity5Count = 0;
+    state.acquired5Rare[result.name] = (state.acquired5Rare[result.name] || 0) + 1;
+  } else {
+    // 4-star
+    state.acquired5[result.name] = (state.acquired5[result.name] || 0) + 1;
+  }
+
+  return { hero: result, isPity };
+}
+
+// --- Update UI ---
+function updateUI() {
+  const tagClass = pkgType === 'collection' ? 'col-rare' : 'rare';
+  const tagClassNormal = pkgType === 'collection' ? 'col-normal' : 'normal';
+
+  if (pkgType === 'normal') {
+    const p5 = document.getElementById('pity5');
+    if (p5) {
+      p5.textContent = state.pity5Count + ' / 30';
+      p5.className = 'value' + (state.pity5Count >= 25 ? ' warn' : '');
+    }
+    if (hasRareGrade) {
+      const pR = document.getElementById('pityRare');
+      if (pR) {
+        pR.textContent = state.pityRareCount + ' / 6';
+        pR.className = 'value' + (state.pityRareCount >= 5 ? ' warn' : '');
+      }
+    }
+    document.getElementById('costDisplay').textContent = state.gold.toLocaleString();
+  } else if (pkgType === 'collection') {
+    const pR = document.getElementById('pityRare');
+    if (pR) {
+      pR.textContent = state.pityRareCount + ' / 6';
+      pR.className = 'value' + (state.pityRareCount >= 5 ? ' warn' : '');
+    }
+    document.getElementById('costDisplay').textContent = state.heroesConsumed.toLocaleString();
+  } else if (pkgType === 'season_reward') {
+    const rd = document.getElementById('remainDraws');
+    if (rd) {
+      rd.textContent = state.remainingDraws + ' / 20';
+      rd.className = 'value' + (state.remainingDraws <= 3 ? ' warn' : '');
+    }
+    const p5 = document.getElementById('pity5');
+    if (p5) {
+      p5.textContent = state.pity5Count + ' / 10';
+      p5.className = 'value' + (state.pity5Count >= 8 ? ' warn' : '');
+    }
+    document.getElementById('costDisplay').textContent = state.remainingDraws;
+    if (state.remainingDraws <= 0) {
+      document.getElementById('btnDraw').disabled = true;
+    }
+  }
+
   document.getElementById('totalPulls').textContent = '총 ' + state.pullCount + '회 뽑기';
 
   const rareListEl = document.getElementById('rareList');
   const rareEntries = Object.entries(state.acquired5Rare);
   rareListEl.innerHTML = rareEntries.length === 0
     ? '<span class="empty-msg">아직 없음</span>'
-    : rareEntries.map(([n, c]) => '<span class="hero-tag rare">' + n + (c > 1 ? ' x' + c : '') + '</span>').join('');
+    : rareEntries.map(([n, c]) => '<span class="hero-tag ' + tagClass + '">' + n + (c > 1 ? ' x' + c : '') + '</span>').join('');
 
-  const star5ListEl = document.getElementById('star5List');
-  const star5Entries = Object.entries(state.acquired5);
-  star5ListEl.innerHTML = star5Entries.length === 0
+  const normalListEl = document.getElementById('normalList');
+  const normalEntries = Object.entries(state.acquired5);
+  normalListEl.innerHTML = normalEntries.length === 0
     ? '<span class="empty-msg">아직 없음</span>'
-    : star5Entries.map(([n, c]) => '<span class="hero-tag normal">' + n + (c > 1 ? ' x' + c : '') + '</span>').join('');
+    : normalEntries.map(([n, c]) => '<span class="hero-tag ' + tagClassNormal + '">' + n + (c > 1 ? ' x' + c : '') + '</span>').join('');
 }
 
+// --- Card display helpers ---
 function gradeToClass(g) {
   if (g === '5rare') return 'star5rare';
   if (g === '5') return 'star5';
   if (g === '4') return 'star4';
+  if (g === 'collection_rare') return 'collection_rare';
   if (g === 'collection') return 'collection';
   return 'star3';
 }
 function gradeToStars(g) {
   if (g === '5rare' || g === '5') return '\u2605\u2605\u2605\u2605\u2605';
   if (g === '4') return '\u2605\u2605\u2605\u2605';
-  if (g === 'collection') return '\u2605';
+  if (g === 'collection_rare' || g === 'collection') return '\u2605';
   return '\u2605\u2605\u2605';
 }
 function gradeLabel(g) {
   if (g === '5rare') return '희귀';
+  if (g === 'collection_rare') return '희귀 컬렉션';
   if (g === 'collection') return '컬렉션';
   return '';
 }
 
+function is5Star(grade) {
+  return grade === '5' || grade === '5rare' || grade === 'collection_rare';
+}
+
+function getBackHintClass(grade) {
+  if (grade === '5rare' || grade === 'collection_rare') return 'hint-5rare';
+  if (grade === '5') return 'hint-5star';
+  return '';
+}
+
+function getAuraClass(grade) {
+  if (grade === '5rare') return 'aura-5rare';
+  if (grade === '5') return 'aura-5star';
+  if (grade === 'collection_rare') return 'aura-collection-rare';
+  return '';
+}
+
+function createCardSlot(hero, isPity, isSingle) {
+  const slot = document.createElement('div');
+  slot.className = 'card-slot' + (isSingle ? ' single' : '');
+
+  const inner = document.createElement('div');
+  inner.className = 'card-inner';
+
+  // Back face
+  const back = document.createElement('div');
+  back.className = 'card-back ' + getBackHintClass(hero.grade);
+  back.innerHTML = '<div class="silhouette"></div>';
+
+  // Front face
+  const front = document.createElement('div');
+  front.className = 'card-front ' + gradeToClass(hero.grade);
+  const label = gradeLabel(hero.grade);
+  front.innerHTML =
+    '<div class="star">' + gradeToStars(hero.grade) + '</div>' +
+    (label ? '<div style="font-size:0.6rem;color:#ffd700;">' + label + '</div>' : '') +
+    '<div class="name">' + hero.name + '</div>' +
+    (isPity ? '<div class="pity-tag">천장</div>' : '');
+
+  inner.appendChild(back);
+  inner.appendChild(front);
+  slot.appendChild(inner);
+
+  // Store data for flip logic
+  slot._hero = hero;
+  slot._isPity = isPity;
+  return slot;
+}
+
+function triggerGoldenFlash(slotEl) {
+  const rect = slotEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const flash = document.createElement('div');
+  flash.className = 'golden-flash';
+  flash.style.setProperty('--fx', cx + 'px');
+  flash.style.setProperty('--fy', cy + 'px');
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 900);
+}
+
+async function flipCard(slot) {
+  const hero = slot._hero;
+  const inner = slot.querySelector('.card-inner');
+
+  // If 5-star, trigger golden flash just before flip
+  if (is5Star(hero.grade)) {
+    triggerGoldenFlash(slot);
+    await new Promise(r => setTimeout(r, 150));
+  }
+
+  inner.classList.add('flipped');
+
+  // After flip completes, add aura
+  await new Promise(r => setTimeout(r, 300));
+  const aura = getAuraClass(hero.grade);
+  if (aura) slot.classList.add(aura);
+}
+
+// --- Draw action ---
 async function doDraw() {
   if (state.drawing) return;
+  if (pkgType === 'season_reward' && state.remainingDraws <= 0) return;
   state.drawing = true;
   document.getElementById('btnDraw').disabled = true;
 
-  state.gold += 948;
-  const results = [];
-  for (let i = 0; i < 5; i++) results.push(singlePull());
-
   const area = document.getElementById('drawArea');
   area.innerHTML = '';
-  const row1 = document.createElement('div');
-  row1.className = 'draw-row';
-  const row2 = document.createElement('div');
-  row2.className = 'draw-row';
-  area.appendChild(row1);
-  area.appendChild(row2);
 
-  for (let i = 0; i < 5; i++) {
-    const { hero, isPity } = results[i];
-    const card = document.createElement('div');
-    card.className = 'card ' + gradeToClass(hero.grade);
-    const label = gradeLabel(hero.grade);
-    card.innerHTML =
-      '<div class="star">' + gradeToStars(hero.grade) + '</div>' +
-      (label ? '<div style="font-size:0.6rem;color:#ffd700;">' + label + '</div>' : '') +
-      '<div class="name">' + hero.name + '</div>' +
-      (isPity ? '<div class="pity-tag">천장</div>' : '');
-    (i < 3 ? row1 : row2).appendChild(card);
-    await new Promise(r => setTimeout(r, 300));
-    card.classList.add('revealed');
+  if (pkgType === 'normal') {
+    // 5-pull: show all backs first, then flip one by one
+    state.gold += 948;
+    const results = [];
+    for (let i = 0; i < 5; i++) results.push(normalPull());
+
+    const row1 = document.createElement('div');
+    row1.className = 'draw-row';
+    const row2 = document.createElement('div');
+    row2.className = 'draw-row';
+    area.appendChild(row1);
+    area.appendChild(row2);
+
+    // Create all card slots (face down)
+    const slots = [];
+    for (let i = 0; i < 5; i++) {
+      const { hero, isPity } = results[i];
+      const slot = createCardSlot(hero, isPity, false);
+      (i < 3 ? row1 : row2).appendChild(slot);
+      slots.push(slot);
+    }
+
+    // Phase 1: Show all backs with stagger
+    for (let i = 0; i < 5; i++) {
+      await new Promise(r => setTimeout(r, 40));
+      slots[i].classList.add('visible');
+    }
+
+    // Brief pause before flipping
     await new Promise(r => setTimeout(r, 200));
+
+    // Phase 2: Flip cards one by one
+    for (let i = 0; i < 5; i++) {
+      await flipCard(slots[i]);
+      await new Promise(r => setTimeout(r, 100));
+    }
+
+  } else if (pkgType === 'collection') {
+    // 1-pull
+    const { hero, isPity } = collectionPull();
+    const slot = createCardSlot(hero, isPity, true);
+    area.appendChild(slot);
+    await new Promise(r => setTimeout(r, 100));
+    slot.classList.add('visible');
+    await new Promise(r => setTimeout(r, 400));
+    await flipCard(slot);
+
+  } else if (pkgType === 'season_reward') {
+    // 1-pull
+    const { hero, isPity } = seasonRewardPull();
+    const slot = createCardSlot(hero, isPity, true);
+    area.appendChild(slot);
+    await new Promise(r => setTimeout(r, 100));
+    slot.classList.add('visible');
+    await new Promise(r => setTimeout(r, 400));
+    await flipCard(slot);
   }
 
   updateUI();
   state.drawing = false;
-  document.getElementById('btnDraw').disabled = false;
+  if (!(pkgType === 'season_reward' && state.remainingDraws <= 0)) {
+    document.getElementById('btnDraw').disabled = false;
+  }
 }
 
+// --- Reset ---
 function doReset() {
   if (state.drawing) return;
   state.pullCount = 0;
   state.pity5Count = 0;
   state.pityRareCount = 0;
   state.gold = 0;
+  state.heroesConsumed = 0;
+  state.remainingDraws = 20;
   state.acquired5 = {};
   state.acquired5Rare = {};
   document.getElementById('drawArea').innerHTML = '<div style="color:#556677; font-size:0.9rem;">뽑기 버튼을 눌러주세요</div>';
+  document.getElementById('btnDraw').disabled = false;
   updateUI();
 }
 
@@ -693,8 +1049,11 @@ function showProb() {
   document.getElementById('probTitle').textContent = '확률표';
 
   const groups = {};
-  const order = ['5rare', '5', '4', '3', 'collection'];
-  const labels = { '5rare': '5성 희귀 장수', '5': '5성 장수', '4': '4성 장수', '3': '3성 장수', 'collection': '컬렉션' };
+  const order = ['5rare', '5', '4', '3', 'collection_rare', 'collection'];
+  const labels = {
+    '5rare': '5성 희귀 장수', '5': '5성 장수', '4': '4성 장수', '3': '3성 장수',
+    'collection_rare': '희귀 컬렉션 장수', 'collection': '컬렉션 장수'
+  };
 
   for (const h of currentPool) {
     if (!groups[h.grade]) groups[h.grade] = [];
@@ -704,9 +1063,8 @@ function showProb() {
   let html = '';
   for (const g of order) {
     if (!groups[g]) continue;
-    const cls = 'g' + g.replace('5rare', '5rare');
     html += '<div class="prob-group">';
-    html += '<div class="prob-group-title ' + cls + '">' + labels[g] + ' (' + groups[g].length + '명)</div>';
+    html += '<div class="prob-group-title g' + g + '">' + labels[g] + ' (' + groups[g].length + '명)</div>';
     for (const h of groups[g]) {
       html += '<div class="prob-row"><span class="prob-name">' + h.name + '</span><span class="prob-val">' + (h.prob * 100).toFixed(4) + '%</span></div>';
     }
@@ -720,7 +1078,7 @@ function closeProb() {
   document.getElementById('probModal').classList.add('hidden');
 }
 
-// Expose functions to global scope for onclick handlers
+// Expose to global scope
 window.selectDepth = selectDepth;
 window.navTo = navTo;
 window.goToSelect = goToSelect;
