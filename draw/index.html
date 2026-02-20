@@ -95,6 +95,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 8px;
+    margin-bottom: 10px;
   }
   .sim-pkg-name {
     font-size: 0.8rem;
@@ -302,7 +303,7 @@
   .card-front.collection_rare .name { color: #ffd700; }
 
   /* Buttons */
-  .btn-row { display: flex; gap: 8px; }
+  .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
   .btn {
     flex: 1; padding: 14px; border: none; border-radius: 10px;
     font-size: 1rem; font-weight: bold; cursor: pointer;
@@ -321,6 +322,55 @@
     border: 1px solid #1a4a7a;
   }
   .btn-prob:hover { background: #1a4a7a; color: #e0e0e0; }
+
+  /* Banner */
+  .banner-wrap {
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    background: #16213e;
+    margin-bottom: 10px;
+  }
+  .banner-track {
+    display: flex;
+    transition: transform 0.4s ease;
+  }
+  .banner-slide {
+    min-width: 100%;
+    display: block;
+    cursor: pointer;
+  }
+  .banner-slide img {
+    width: 100%;
+    display: block;
+    border-radius: 8px;
+  }
+  .banner-placeholder {
+    width: 100%;
+    padding: 14px 0;
+    text-align: center;
+    color: #556677;
+    font-size: 0.85rem;
+  }
+  .banner-dots {
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+  }
+  .banner-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .banner-dot.active {
+    background: rgba(240,192,64,0.8);
+  }
 
   /* Stats panel */
   .stats {
@@ -407,6 +457,15 @@
   }
   .prob-row .prob-name { color: #cccccc; }
   .prob-row .prob-val { color: #8899aa; font-family: monospace; }
+  .footer {
+    width: 100%;
+    text-align: center;
+    padding: 20px 12px 16px;
+    margin-top: auto;
+    font-size: 0.75rem;
+    color: #555;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
 </style>
 </head>
 <body>
@@ -442,6 +501,8 @@
       <button class="btn btn-prob" onclick="showProb()">확률표</button>
       <button class="btn btn-reset" onclick="doReset()">초기화</button>
     </div>
+
+    <div class="banner-wrap" id="bannerWrap"></div>
 
     <div class="stats" id="statsPanel"></div>
   </div>
@@ -1087,10 +1148,70 @@ window.doReset = doReset;
 window.showProb = showProb;
 window.closeProb = closeProb;
 
+/* ── Banner ── */
+let BANNERS = [], bannerIdx = 0, bannerTimer = null;
+
+function renderBanner() {
+  const wrap = document.getElementById('bannerWrap');
+  if (!BANNERS.length) {
+    wrap.innerHTML = '<div class="banner-placeholder">광고 받아요~</div>';
+    return;
+  }
+  let html = '<div class="banner-track" id="bannerTrack">';
+  BANNERS.forEach((b, i) => {
+    html += '<a class="banner-slide" href="' + b.url + '" target="_blank" rel="noopener">' +
+            '<img src="' + b.img + '" alt="banner ' + (i+1) + '"></a>';
+  });
+  html += '</div>';
+  if (BANNERS.length > 1) {
+    html += '<div class="banner-dots" id="bannerDots">';
+    BANNERS.forEach((_, i) => {
+      html += '<div class="banner-dot' + (i === 0 ? ' active' : '') + '" onclick="goToBanner(' + i + ')"></div>';
+    });
+    html += '</div>';
+  }
+  wrap.innerHTML = html;
+  if (BANNERS.length > 1) startBannerRoll();
+}
+
+function goToBanner(i) {
+  bannerIdx = i;
+  document.getElementById('bannerTrack').style.transform = 'translateX(-' + (bannerIdx * 100) + '%)';
+  const dots = document.querySelectorAll('.banner-dot');
+  dots.forEach((d, idx) => d.classList.toggle('active', idx === bannerIdx));
+  resetBannerTimer();
+}
+
+function startBannerRoll() {
+  bannerTimer = setInterval(() => {
+    goToBanner((bannerIdx + 1) % BANNERS.length);
+  }, 3000);
+}
+
+function resetBannerTimer() {
+  if (bannerTimer) clearInterval(bannerTimer);
+  if (BANNERS.length > 1) startBannerRoll();
+}
+
+function initBanner() {
+  fetch('./banner.json')
+    .then(r => r.ok ? r.json() : [])
+    .catch(() => [])
+    .then(data => { BANNERS = data || []; renderBanner(); });
+}
+
+window.goToBanner = goToBanner;
+initBanner();
+
 renderPkgScreen();
 } // end initApp
 
 init();
 </script>
+
+<div class="footer">
+  © 2026 新星논알콜. All rights reserved.
+</div>
+
 </body>
 </html>
